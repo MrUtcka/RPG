@@ -23,21 +23,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ProgressBar hpBar;
     ProgressBar hpEnemyBar;
     Random random;
-    SharedPreferences sPref;
     Intent intent;
     Enemy enemy;
     Player player;
+    Story story;
+    TextView statusStory;
     TextView status;
     TextView enemyStatus;
 
     Button[] buttons = new Button[5];
-    Enemy[] enemies = new Enemy[5];
+    Enemy[] enemies = new Enemy[4];
     String[] inventory = new String[3];
     String[] drop = new String[3];
 
     boolean isBattle = false;
     boolean isInventory = false;
 
+    int currStory = 0;
     int countWin = 0;
     int ultimate = 3;
 
@@ -51,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         status = (TextView) findViewById(R.id.status);
         enemyStatus = (TextView) findViewById(R.id.enemy);
+        statusStory = (TextView) findViewById(R.id.Story);
 
         buttons[0] = (Button) findViewById(R.id.battle);
         buttons[1] = (Button) findViewById(R.id.inventory);
@@ -65,11 +68,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttons[4].setOnClickListener(this);
 
         player = new Player(100, 0, 25);
+        story = new Story();
         random = new Random();
 
         for(int i = 0; i < inventory.length; i++) { inventory[i] = "null"; }
         setDrop();
         setEnemies();
+        story.setStory();
     }
 
     @Override
@@ -90,13 +95,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         enemies[1] = new Enemy("Archer", 25, 5, 15, drop);
         enemies[2] = new Enemy("Wizard", 15, 0, 25, drop);
         enemies[3] = new Enemy("GunMan", 25, 5, 25, drop);
-        enemies[4] = new Enemy("UnDead", 10, 5, 5, drop);
         enemy = new Enemy("", 1, 0, 0, drop);
         clear(2);
     }
 
-    private void setEnemy() {
-        enemy = enemies[random.nextInt(enemies.length)];
+    private void setEnemy(int i) {
+        enemy = enemies[i];
         hpEnemyBar.setMax(enemy.hp);
         countWin++;
         ultimate--;
@@ -114,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         hpBar.setProgress(player.hp);
         hpEnemyBar.setProgress(enemy.hp);
 
-        if(!isBattle) { buttons[0].setText("Battle!"); buttons[1].setText("Inventory!"); buttons[2].setText("Skip!"); }
+        if(!isBattle && !isInventory) { buttons[0].setText("Next!"); buttons[1].setText("Inventory!"); buttons[2].setText("Skip!"); }
         if(isInventory && !isBattle) { for(int j = 0; j < inventory.length; j++) { guiInventory(j); }}
         else if(isBattle && !isInventory) { buttons[0].setText("Attack!"); buttons[1].setText("Defence!"); buttons[2].setText("Skip!"); }
 
@@ -123,8 +127,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     //Battle
 
-    private void battle() {
-        setEnemy();
+    private void battle(int i) {
+        setEnemy(i);
         update(0);
 
         isBattle = true;
@@ -141,13 +145,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(enemy.hp <= 0) { isBattle = false; add(); }
     }
 
+    private void next() {
+        statusStory.setText(story.story[currStory][0]);
+
+        buttons[0].setText(story.story[currStory][0]);
+        buttons[1].setText(story.story[currStory][0]);
+        buttons[2].setText(story.story[currStory][0]);
+    }
+
     //Save system
 
 
 
     //Inventory system
 
-    private void inventory(int i) {
+    private void use(int i) {
         if(inventory[i].equals("LittleHealth Potion")) { player.hp += 15; inventory[i] = "null"; buttons[i].setVisibility(View.INVISIBLE); }
         else if(inventory[i].equals("Health Potion")) { player.hp += 25; inventory[i] = "null"; buttons[i].setVisibility(View.INVISIBLE); }
         else if(inventory[i].equals("MegaHealth Potion")) { player.hp += 45; inventory[i] = "null"; buttons[i].setVisibility(View.INVISIBLE); }
@@ -170,8 +182,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View v) {
         switch(v.getId()) {
             case R.id.battle:
-                if(!isBattle && !isInventory) { battle();  }
-                else if(!isBattle && isInventory) { inventory(0); }
+                if(!isBattle && !isInventory) { next(); }
+                else if(!isBattle && isInventory) { use(0); }
                 else {
                     player.attack(enemy);
                     die();
@@ -180,7 +192,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.inventory:
                 if(!isBattle && !isInventory) { isInventory = true; }
-                else if(!isBattle && isInventory) { inventory(1); }
+                else if(!isBattle && isInventory) { use(1); }
                 else {
                     player.defence(enemy);
                     die();
@@ -188,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 break;
             case R.id.skip:
-                if(!isBattle && isInventory) { inventory(2); }
+                if(!isBattle && isInventory) { use(2); }
                 if(isBattle && !isInventory) { ultimate--; player.hp -= enemy.dmg >= player.arm ? enemy.dmg - player.arm : player.arm - enemy.dmg; }
 
                 break;
